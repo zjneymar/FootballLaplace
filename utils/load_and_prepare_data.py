@@ -12,7 +12,7 @@ def load_and_prepare_data(csv_file):
             date_col = col
             break
     if date_col:
-        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+        df[date_col] = pd.to_datetime(df[date_col], errors='coerce', dayfirst=True)
         df = df.sort_values(date_col).reset_index(drop=True)
     else:
         print("未找到日期列，按原始顺序处理")

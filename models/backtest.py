@@ -32,11 +32,11 @@ def load_test_data(filepath):
     return df
 
 
-def get_league_averages(df):
+def get_league_averages(df, n_last=7):
     """
-    计算联赛场均 xG 和 xGA（使用team_a_xg和team_b_xg）
+    计算联赛场均 xG 和 xGA（使用最近n_last场比赛）
     """
-    # 遍历每场比赛，计算比赛前的累积xG/xGA
+    # 遍历每场比赛，计算比赛前的最近n_last场的xG/xGA
     all_xg = []
     all_xga = []
     min_games = 5
@@ -46,26 +46,31 @@ def get_league_averages(df):
         away_team = df.iloc[i]['AwayTeam']
 
         if i >= min_games:
-            # 主队历史数据
+            # 主队历史数据（取最近n_last场）
             home_history = df.iloc[:i]
             home_home = home_history[home_history['HomeTeam'] == home_team]
             home_away = home_history[home_history['AwayTeam'] == home_team]
+            # 取最近n_last场比赛
+            home_home_last = home_home.tail(n_last)
+            home_away_last = home_away.tail(n_last)
             # xG: 主场用team_a_xg，客场用team_b_xg
-            home_xg = home_home['team_a_xg'].sum() + home_away['team_b_xg'].sum()
+            home_xg = home_home_last['team_a_xg'].sum() + home_away_last['team_b_xg'].sum()
             # xGA: 主场用team_b_xg，客场用team_a_xg
-            home_xga = home_home['team_b_xg'].sum() + home_away['team_a_xg'].sum()
-            home_matches = len(home_home) + len(home_away)
+            home_xga = home_home_last['team_b_xg'].sum() + home_away_last['team_a_xg'].sum()
+            home_matches = len(home_home_last) + len(home_away_last)
 
             if home_matches >= min_games:
                 all_xg.append(home_xg / home_matches)
                 all_xga.append(home_xga / home_matches)
 
-            # 客队历史数据
+            # 客队历史数据（取最近n_last场）
             away_home = home_history[home_history['HomeTeam'] == away_team]
             away_away = home_history[home_history['AwayTeam'] == away_team]
-            away_xg = away_home['team_a_xg'].sum() + away_away['team_b_xg'].sum()
-            away_xga = away_home['team_b_xg'].sum() + away_away['team_a_xg'].sum()
-            away_matches = len(away_home) + len(away_away)
+            away_home_last = away_home.tail(n_last)
+            away_away_last = away_away.tail(n_last)
+            away_xg = away_home_last['team_a_xg'].sum() + away_away_last['team_b_xg'].sum()
+            away_xga = away_home_last['team_b_xg'].sum() + away_away_last['team_a_xg'].sum()
+            away_matches = len(away_home_last) + len(away_away_last)
 
             if away_matches >= min_games:
                 all_xg.append(away_xg / away_matches)
@@ -76,17 +81,17 @@ def get_league_averages(df):
     return league_avg_xG, league_avg_xGA
 
 
-def get_team_xg_before_match(df, team_name, match_idx):
-    """获取某队在特定比赛之前的累积 xG 和 xGA（使用team_a_xg和team_b_xg）"""
+def get_team_xg_before_match(df, team_name, match_idx, n_last=7):
+    """获取某队在特定比赛之前最近n_last场的 xG 和 xGA"""
     df_history = df.iloc[:match_idx]
 
     if len(df_history) == 0:
         return None, None, 0
 
-    # 该队作为主队的比赛
-    home_games = df_history[df_history['HomeTeam'] == team_name]
-    # 该队作为客队的比赛
-    away_games = df_history[df_history['AwayTeam'] == team_name]
+    # 该队作为主队的比赛（取最近n_last场）
+    home_games = df_history[df_history['HomeTeam'] == team_name].tail(n_last)
+    # 该队作为客队的比赛（取最近n_last场）
+    away_games = df_history[df_history['AwayTeam'] == team_name].tail(n_last)
 
     # xG: 主场用team_a_xg，客场用team_b_xg
     xg = home_games['team_a_xg'].sum() + away_games['team_b_xg'].sum()
@@ -97,14 +102,19 @@ def get_team_xg_before_match(df, team_name, match_idx):
     return xg, xga, matches_played
 
 
-def backtest(filepath="data/test.csv", min_games=5):
+def backtest(filepath="data/test.csv", min_games=5, n_last=7):
     """
     回测预测策略的准确性（使用test.csv中的xG数据）
+
+    参数:
+        filepath: 测试数据文件路径
+        min_games: 球队最少需要参加的比赛场次
+        n_last: 只取最近n_last场比赛计算xG/xGA
     """
     df = load_test_data(filepath)
 
-    # 计算联赛平均
-    league_avg_xG, league_avg_xGA = get_league_averages(df)
+    # 计算联赛平均（使用最近n_last场）
+    league_avg_xG, league_avg_xGA = get_league_averages(df, n_last)
 
     print(f"联赛平均: xG={league_avg_xG:.2f}, xGA={league_avg_xGA:.2f}")
 
@@ -118,9 +128,9 @@ def backtest(filepath="data/test.csv", min_games=5):
         actual_goals_home = match['FTHG']
         actual_goals_away = match['FTAG']
 
-        # 获取历史比赛的xG数据（team_a_xg=主队xG, team_b_xg=客队xG）
-        home_xg, home_xga, home_matches = get_team_xg_before_match(df, home_team, i)
-        away_xg, away_xga, away_matches = get_team_xg_before_match(df, away_team, i)
+        # 获取历史比赛的xG数据（取最近n_last场）
+        home_xg, home_xga, home_matches = get_team_xg_before_match(df, home_team, i, n_last)
+        away_xg, away_xga, away_matches = get_team_xg_before_match(df, away_team, i, n_last)
 
         if home_matches < min_games or away_matches < min_games:
             continue
@@ -138,7 +148,7 @@ def backtest(filepath="data/test.csv", min_games=5):
         # 泊松概率预测
         pred = poisson_match_prob(lambda_home, lambda_away)
 
-        # 预测结果
+        # 预测结果：选概率最高的胜/负
         probs = {'H': pred['home_win'], 'D': pred['draw'], 'A': pred['away_win']}
         predicted_result = max(probs, key=probs.get)
 

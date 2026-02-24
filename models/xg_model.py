@@ -26,14 +26,12 @@ def get_league_averages():
     return league_avg_xG, league_avg_xGA
 
 
-def get_team_form(team_name, n_last=None, end_idx=None):
+def get_team_form(team_name):
     """
     根据联赛积分榜数据获取球队场均 xG 和 xGA
 
     参数:
         team_name: 球队名称
-        n_last: 保留参数（用于兼容旧接口）
-        end_idx: 保留参数（用于兼容旧接口）
 
     返回:
         dict: 包含球队场均 xG, xGA
@@ -69,7 +67,7 @@ def get_team_form(team_name, n_last=None, end_idx=None):
     }
 
 
-def predict_lambdas_xg(home_team, away_team):
+def predict_lambdas(home_team, away_team):
     """
     使用 xG 数据预测比赛期望进球
 
@@ -110,5 +108,5 @@ if __name__ == "__main__":
     print(f"{away_team}: xG={away_form['xG']:.2f}, xGA={away_form['xGA']:.2f}")
     print(f"联赛平均: xG={home_form['league_avg_xG']:.2f}, xGA={home_form['league_avg_xGA']:.2f}")
 
-    lambda_home, lambda_away = predict_lambdas_xg(home_team, away_team)
+    lambda_home, lambda_away = predict_lambdas(home_team, away_team)
     print(f"\n预期进球: {home_team} {lambda_home:.2f} - {lambda_away:.2f} {away_team}")

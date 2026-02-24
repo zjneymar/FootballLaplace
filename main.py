@@ -8,20 +8,20 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 from models.poisson_match_prob import poisson_match_prob
-from models.xg_model import predict_lambdas_xg
+from models.xg_model import predict_lambdas
 
 
 # ========================
 # 配置区
 # ========================
-HOME_TEAM = "Manchester United"  # 主队名称
-AWAY_TEAM = "Liverpool"          # 客队名称
+HOME_TEAM = "Sunderland"  # 主队名称
+AWAY_TEAM = "Fulham"          # 客队名称
 
 
 if __name__ == "__main__":
     # 预测 λ
     print(f"\n计算 {HOME_TEAM} vs {AWAY_TEAM} 的期望进球...")
-    lambda1, lambda2 = predict_lambdas_xg(HOME_TEAM, AWAY_TEAM)
+    lambda1, lambda2 = predict_lambdas(HOME_TEAM, AWAY_TEAM)
 
     # 泊松预测
     result = poisson_match_prob(lambda1, lambda2)
